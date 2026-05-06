@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
+import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,7 +9,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const cormorantGaramond = Cormorant_Garamond({
+const newsreader = Newsreader({
   subsets: ["latin"],
   weight: ["400", "500"],
   style: ["normal", "italic"],
@@ -37,7 +37,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${cormorantGaramond.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable}`}
     >
       <body className="font-sans antialiased min-h-screen">{children}</body>
     </html>
