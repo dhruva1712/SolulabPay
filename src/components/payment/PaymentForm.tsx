@@ -42,7 +42,9 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
       options: ResolverOptions<PaymentFormValues>
     ): Promise<ResolverResult<PaymentFormValues>> => {
       const schema = buildPaymentFormSchema(cardTypeRef.current);
-      return zodResolver(schema)(data as any, context, options as any) as Promise<ResolverResult<PaymentFormValues>>;
+      const zodResolverFn = zodResolver(schema);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return zodResolverFn(data as any, context, options as any) as Promise<ResolverResult<PaymentFormValues>>;
     },
     []
   );
@@ -326,7 +328,14 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                       value={field.value ?? ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const parsed = parseFloat(value);
+                        // Strip non-numeric characters except decimal point
+                        const sanitised = value.replace(/[^0-9.]/g, '');
+                        // Only allow one decimal point
+                        const parts = sanitised.split('.');
+                        const cleaned = parts.length > 2
+                          ? parts[0] + '.' + parts.slice(1).join('')
+                          : sanitised;
+                        const parsed = parseFloat(cleaned);
                         field.onChange(isNaN(parsed) ? undefined : parsed);
                       }}
                       onBlur={field.onBlur}

@@ -32,12 +32,22 @@ function pickFailureReason(): string {
   return reasons[Math.floor(Math.random() * reasons.length)];
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new Error('Aborted'));
+    });
+  });
 }
 
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && parseInt(contentLength) > 10_000) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -58,33 +68,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ? forceOutcome
       : pickOutcome();
 
-  // STEP C5 — Handle each outcome
-  if (outcome === 'success') {
-    const ms = Math.floor(Math.random() * (2200 - 1500 + 1)) + 1500;
-    await delay(ms);
-    return NextResponse.json(
-      { outcome: 'success', txId, processedAt: Date.now() },
-      { status: 200 }
-    );
-  }
+  try {
+    if (outcome === 'success') {
+      const ms = Math.floor(Math.random() * (2200 - 1500 + 1)) + 1500;
+      await delay(ms, request.signal);
+      return NextResponse.json(
+        { outcome: 'success', txId, processedAt: Date.now() },
+        { status: 200 }
+      );
+    }
 
-  if (outcome === 'failed') {
-    const ms = Math.floor(Math.random() * (2200 - 1500 + 1)) + 1500;
-    await delay(ms);
-    return NextResponse.json(
-      { outcome: 'failed', txId, reason: pickFailureReason() },
-      { status: 200 }
-    );
-  }
+    if (outcome === 'failed') {
+      const ms = Math.floor(Math.random() * (2200 - 1500 + 1)) + 1500;
+      await delay(ms, request.signal);
+      return NextResponse.json(
+        { outcome: 'failed', txId, reason: pickFailureReason() },
+        { status: 200 }
+      );
+    }
 
-  if (outcome === 'timeout') {
-    await delay(8000);
-    return NextResponse.json(
-      { outcome: 'failed', txId, reason: 'Gateway timeout' },
-      { status: 200 }
-    );
-  }
+    if (outcome === 'timeout') {
+      await delay(8000, request.signal);
+      return NextResponse.json(
+        { outcome: 'failed', txId, reason: 'Gateway timeout' },
+        { status: 200 }
+      );
+    }
 
-  const _exhaustive: never = outcome;
-  return _exhaustive;
+    const _exhaustive: never = outcome;
+    return _exhaustive;
+  } catch (error) {
+    // Client disconnected or aborted
+    return NextResponse.json({ error: 'Request aborted' }, { status: 499 });
+  }
 }

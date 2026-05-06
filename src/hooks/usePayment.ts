@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import usePaymentStore from '@/store/paymentStore';
 import { MAX_ATTEMPTS, REQUEST_TIMEOUT_MS } from '@/types/payment';
 import type { PaymentFormValues } from '@/utils/validation';
@@ -9,11 +9,24 @@ import { getLast4 } from '@/utils/formatting';
 import { detectCardType } from '@/utils/cardDetection';
 
 export function usePayment() {
-  const store = usePaymentStore();
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isInFlightRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   const submitPayment = useCallback(
     async (values: PaymentFormValues, forceTxId?: string) => {
+      // Prevent multiple submits in flight
+      if (isInFlightRef.current) return;
+      isInFlightRef.current = true;
+
       // Step 1 — Determine txId and attempt number
       let txId: string;
       let attempt: number;
@@ -24,18 +37,28 @@ export function usePayment() {
         attempt = 1;
       } else {
         // Retry — read from current status
-        const currentStatus = store.status;
-        if (currentStatus.kind !== 'failed' && currentStatus.kind !== 'timeout') return;
+        const currentStatus = usePaymentStore.getState().status;
+        if (currentStatus.kind !== 'failed' && currentStatus.kind !== 'timeout') {
+          isInFlightRef.current = false;
+          return;
+        }
         txId = currentStatus.txId;
         attempt = currentStatus.attempt + 1;
       }
 
-      if (!txId) return;
+      if (!txId) {
+        isInFlightRef.current = false;
+        return;
+      }
 
       attempt = Math.min(attempt, MAX_ATTEMPTS);
 
-      // Step 2 — Set processing state
-      store.setProcessing(attempt);
+      // Step 2 — Set processing state (RACE B FIX — use getState())
+      if (!isMountedRef.current) {
+        isInFlightRef.current = false;
+        return;
+      }
+      usePaymentStore.getState().setProcessing(attempt);
 
       // Step 3 — Create AbortController
       abortControllerRef.current?.abort();
@@ -74,6 +97,9 @@ export function usePayment() {
 
         const data: GatewayResponse = await response.json();
 
+        // Check mounted before store writes
+        if (!isMountedRef.current) return;
+
         if (data.outcome === 'success') {
           const transaction: Transaction = {
             id: txId,
@@ -86,10 +112,10 @@ export function usePayment() {
             createdAt: Date.now(),
             attempts: attempt,
           };
-          store.setSuccess(transaction);
+          usePaymentStore.getState().setSuccess(transaction);
         } else {
           const canRetry = attempt < MAX_ATTEMPTS;
-          store.setFailed(data.reason, attempt, canRetry);
+          usePaymentStore.getState().setFailed(data.reason, attempt, canRetry);
 
           if (!canRetry) {
             const transaction: Transaction = {
@@ -104,17 +130,20 @@ export function usePayment() {
               createdAt: Date.now(),
               attempts: attempt,
             };
-            store.addTransactionToHistory(transaction);
+            usePaymentStore.getState().addTransactionToHistory(transaction);
           }
         }
       } catch (error: unknown) {
         clearTimeout(timeoutId);
 
+        // Check mounted before store writes
+        if (!isMountedRef.current) return;
+
         const isAbort = error instanceof Error && error.name === 'AbortError';
 
         if (isAbort) {
           const canRetry = attempt < MAX_ATTEMPTS;
-          store.setTimeoutStatus(attempt, canRetry);
+          usePaymentStore.getState().setTimeoutStatus(attempt, canRetry);
 
           if (!canRetry) {
             const transaction: Transaction = {
@@ -129,12 +158,12 @@ export function usePayment() {
               createdAt: Date.now(),
               attempts: attempt,
             };
-            store.addTransactionToHistory(transaction);
+            usePaymentStore.getState().addTransactionToHistory(transaction);
           }
         } else {
           const canRetry = attempt < MAX_ATTEMPTS;
           const reason = 'Something went wrong. Please try again.';
-          store.setFailed(reason, attempt, canRetry);
+          usePaymentStore.getState().setFailed(reason, attempt, canRetry);
 
           if (!canRetry) {
             const transaction: Transaction = {
@@ -149,20 +178,21 @@ export function usePayment() {
               createdAt: Date.now(),
               attempts: attempt,
             };
-            store.addTransactionToHistory(transaction);
+            usePaymentStore.getState().addTransactionToHistory(transaction);
           }
         }
       } finally {
         clearTimeout(timeoutId);
+        isInFlightRef.current = false;
       }
     },
-    [store]
+    []
   );
 
   const reset = useCallback(() => {
     abortControllerRef.current?.abort();
-    store.reset();
-  }, [store]);
+    usePaymentStore.getState().reset();
+  }, []);
 
   return { submitPayment, reset };
 }

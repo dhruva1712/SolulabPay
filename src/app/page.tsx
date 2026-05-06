@@ -19,6 +19,7 @@ export default function Home() {
   const lastValuesRef = useRef<PaymentFormValues | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [formattedAmount, setFormattedAmount] = useState('');
+  const [resetKey, setResetKey] = useState(0);
 
   const handleSubmit = useCallback(
     async (values: PaymentFormValues) => {
@@ -53,6 +54,7 @@ export default function Home() {
     reset();
     lastValuesRef.current = null;
     setFormattedAmount('');
+    setResetKey(k => k + 1);
   }, [reset]);
 
   const isSubmitting = status.kind === 'processing';
@@ -81,7 +83,7 @@ export default function Home() {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
           >
-            <PaymentForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+            <PaymentForm key={resetKey} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           </motion.div>
         )}
 
@@ -106,6 +108,18 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {status.kind === 'processing' && 'Processing your payment, please wait.'}
+        {status.kind === 'success' && 'Payment confirmed successfully.'}
+        {status.kind === 'failed' && `Payment declined: ${status.reason}`}
+        {status.kind === 'timeout' && 'Payment request timed out. Please try again.'}
+      </div>
 
       <ProcessingOverlay />
     </main>

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import type { PaymentStatus, Transaction } from '@/types/payment';
 
 interface PaymentState {
@@ -18,6 +18,33 @@ interface PaymentState {
   reset: () => void;
   clearHistory: () => void;
 }
+
+const MAX_HISTORY = 50;
+
+// Safe localStorage wrapper
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silent fail — private browsing or quota exceeded
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Silent fail
+    }
+  },
+};
 
 const usePaymentStore = create<PaymentState>()(
   persist(
@@ -48,7 +75,8 @@ const usePaymentStore = create<PaymentState>()(
 
       setSuccess: (transaction) => {
         set((state) => ({
-          history: [transaction, ...state.history],
+          // ISSUE C FIX — Cap history at MAX_HISTORY
+          history: [transaction, ...state.history].slice(0, MAX_HISTORY),
           status: { kind: 'success', txId: transaction.id, transaction },
           currentTxId: null,
         }));
@@ -74,7 +102,8 @@ const usePaymentStore = create<PaymentState>()(
 
       addTransactionToHistory: (tx) => {
         set((state) => ({
-          history: [tx, ...state.history],
+          // Cap history at MAX_HISTORY
+          history: [tx, ...state.history].slice(0, MAX_HISTORY),
         }));
       },
 
@@ -93,9 +122,32 @@ const usePaymentStore = create<PaymentState>()(
     }),
     {
       name: 'payment-gateway-v1',
-      storage: createJSONStorage(() => localStorage),
+      storage: {
+        getItem: (key) => {
+          const value = safeStorage.getItem(key);
+          return value ? JSON.parse(value) : null;
+        },
+        setItem: (key, value) => {
+          safeStorage.setItem(key, JSON.stringify(value));
+        },
+        removeItem: (key) => {
+          safeStorage.removeItem(key);
+        },
+      },
       partialize: (state) => ({ history: state.history }),
       version: 1,
+      // Migrate corrupted data
+      migrate: (persistedState: unknown, version: number) => {
+        // If state shape is unexpected, return clean default
+        if (!persistedState || typeof persistedState !== 'object') {
+          return { history: [] };
+        }
+        const state = persistedState as Record<string, unknown>;
+        if (!Array.isArray(state.history)) {
+          return { history: [] };
+        }
+        return state;
+      },
     }
   )
 );

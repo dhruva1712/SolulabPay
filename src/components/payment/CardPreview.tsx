@@ -33,24 +33,27 @@ export default function CardPreview({
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const [isHovered, setIsHovered] = useState(false);
 
-  // Detect touch devices
+  //Detect touch devices and reduced motion preference
   const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+  const prefersReducedMotion = typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (isTouchDevice || !cardRef.current) return;
+    if (isTouchDevice || prefersReducedMotion || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width; 
     const y = (e.clientY - rect.top) / rect.height;
     setMousePos({ x, y });
-  }, [isTouchDevice]);
+  }, [isTouchDevice, prefersReducedMotion]);
 
   const handleMouseEnter = () => {
-    if (isTouchDevice) return;
+    if (isTouchDevice || prefersReducedMotion) return;
     setIsHovered(true);
   };
 
   const handleMouseLeave = () => {
-    if (isTouchDevice) return;
+    if (isTouchDevice || prefersReducedMotion) return;
     setIsHovered(false);
     setMousePos({ x: 0.5, y: 0.5 });
   };
@@ -69,7 +72,7 @@ export default function CardPreview({
         className="w-full h-full relative"
         style={{ transformStyle: 'preserve-3d' }}
         animate={{ rotateY: isCvvFocused ? 180 : 0 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+        transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 100, damping: 20 }}
       >
         {/* Front face */}
         <motion.div
@@ -87,8 +90,8 @@ export default function CardPreview({
             rotateY,
             scale: isHovered ? 1.02 : 1,
           }}
-          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-          onMouseMove={handleMouseMove}
+          transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 25 }}
+          onMouseMove={prefersReducedMotion ? undefined : handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >

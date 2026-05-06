@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CardType, Currency } from '@/types/payment';
+import type { CardType } from '@/types/payment';
 
 export function luhnCheck(digits: string): boolean {
   if (!digits || !/^\d+$/.test(digits)) return false;
