@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCardNumber } from '@/utils/cardDetection';
 import type { CardType } from '@/types/payment';
@@ -12,6 +12,9 @@ interface CardPreviewProps {
   cardType: CardType;
   isCvvFocused: boolean;
   isProcessing?: boolean;
+  activeSlot?: 'cardNumber' | 'cardholderName' | 'expiry' | 'cvv' | null;
+  isComplete?: boolean;
+  autoShimmer?: boolean;
 }
 
 const cardNetworkLabels: Record<CardType, string> = {
@@ -28,16 +31,48 @@ export default function CardPreview({
   cardType,
   isCvvFocused,
   isProcessing = false,
+  activeSlot = null,
+  isComplete = false,
+  autoShimmer = false,
 }: CardPreviewProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
   const [isHovered, setIsHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const wasCompleteRef = useRef(false);
+  const [showActivationShimmer, setShowActivationShimmer] = useState(false);
 
   //Detect touch devices and reduced motion preference
   const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
   const prefersReducedMotion = typeof window !== 'undefined'
     ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
     : false;
+
+  // Detect mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Track completion state for activation animation
+  useEffect(() => {
+    if (isComplete && !wasCompleteRef.current) {
+      // Just became complete — trigger activation shimmer
+      setShowActivationShimmer(true);
+      setTimeout(() => setShowActivationShimmer(false), 1200);
+    }
+    wasCompleteRef.current = isComplete ?? false;
+  }, [isComplete]);
+
+  // Auto-trigger shimmer when autoShimmer prop becomes true
+  useEffect(() => {
+    if (autoShimmer) {
+      setShowActivationShimmer(true);
+      setTimeout(() => setShowActivationShimmer(false), 1200);
+    }
+  }, [autoShimmer]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isTouchDevice || prefersReducedMotion || !cardRef.current) return;
@@ -66,6 +101,13 @@ export default function CardPreview({
   const rotateX = isHovered ? (mousePos.y - 0.5) * -14 : 0;
   const rotateY = isHovered ? (mousePos.x - 0.5) * 14 : 0;
 
+  // Slot state helper
+  const getSlotState = (slot: 'cardNumber' | 'cardholderName' | 'expiry') => {
+    if (!activeSlot) return 'idle';
+    if (activeSlot === slot) return 'active';
+    return 'dimmed';
+  };
+
   return (
     <div style={{ perspective: '1200px' }} className="w-full">
       <motion.div
@@ -89,6 +131,7 @@ export default function CardPreview({
             rotateX,
             rotateY,
             scale: isHovered ? 1.02 : 1,
+            opacity: isMobile ? (isComplete ? 1 : 0.85) : 1,
           }}
           transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 25 }}
           onMouseMove={prefersReducedMotion ? undefined : handleMouseMove}
@@ -204,6 +247,36 @@ export default function CardPreview({
             )}
           </AnimatePresence>
 
+          {/* Activation shimmer on completion */}
+          <AnimatePresence>
+            {showActivationShimmer && (
+              <motion.div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 10,
+                  pointerEvents: 'none',
+                  overflow: 'hidden',
+                }}
+              >
+                <motion.div
+                  initial={{ left: '-60%' }}
+                  animate={{ left: '160%' }}
+                  transition={{ duration: 0.8, ease: 'easeInOut' }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    width: '50%',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)',
+                    filter: 'blur(12px)',
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Card content */}
           <div className="flex flex-col justify-between h-full p-7">
             {/* Top row */}
@@ -249,7 +322,14 @@ export default function CardPreview({
             </div>
 
             {/* Card number */}
-            <div className="font-mono text-[19px] tracking-[0.12em] text-ink mt-4">
+            <motion.div
+              className="font-mono text-[19px] tracking-[0.12em] text-ink mt-4"
+              animate={{
+                opacity: getSlotState('cardNumber') === 'dimmed' ? 0.4 : 1,
+                scale: getSlotState('cardNumber') === 'active' ? 1.02 : 1,
+              }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={formattedNumber}
@@ -259,31 +339,83 @@ export default function CardPreview({
                   transition={{ duration: 0.15 }}
                 >
                   {formattedNumber}
+                  {activeSlot === 'cardNumber' && (
+                    <motion.span
+                      animate={{ opacity: [1, 0, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                      style={{
+                        display: 'inline-block',
+                        width: '2px',
+                        height: '1em',
+                        backgroundColor: 'var(--accent)',
+                        marginLeft: '4px',
+                        verticalAlign: 'middle',
+                      }}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
-            </div>
+            </motion.div>
 
             {/* Bottom row */}
             <div className="flex justify-between items-end">
               {/* Cardholder name */}
-              <div>
+              <motion.div
+                animate={{
+                  opacity: getSlotState('cardholderName') === 'dimmed' ? 0.4 : 1,
+                  scale: getSlotState('cardholderName') === 'active' ? 1.02 : 1,
+                }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
                 <div className="font-mono text-[9px] tracking-[0.18em] uppercase text-ink-muted mb-1">
                   CARDHOLDER
                 </div>
                 <div className="font-sans font-medium text-[13px] tracking-[0.06em] uppercase text-ink">
                   {displayName}
                 </div>
-              </div>
+                {activeSlot === 'cardholderName' && (
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    style={{
+                      height: '1px',
+                      background: 'var(--accent)',
+                      marginTop: '3px',
+                      transformOrigin: 'left',
+                      opacity: 0.6,
+                    }}
+                  />
+                )}
+              </motion.div>
 
               {/* Expiry */}
-              <div>
+              <motion.div
+                animate={{
+                  opacity: getSlotState('expiry') === 'dimmed' ? 0.4 : 1,
+                  scale: getSlotState('expiry') === 'active' ? 1.02 : 1,
+                }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
                 <div className="font-mono text-[9px] tracking-[0.18em] uppercase text-ink-muted mb-1">
                   VALID THRU
                 </div>
                 <div className="font-mono text-[13px] tracking-[0.05em] text-ink">
                   {displayExpiry}
                 </div>
-              </div>
+                {activeSlot === 'expiry' && (
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    style={{
+                      height: '1px',
+                      background: 'var(--accent)',
+                      marginTop: '3px',
+                      transformOrigin: 'left',
+                      opacity: 0.6,
+                    }}
+                  />
+                )}
+              </motion.div>
 
               {/* Network name */}
               <div className="font-sans font-semibold text-[13px] tracking-[0.18em] uppercase text-ink">
@@ -327,10 +459,25 @@ export default function CardPreview({
           />
 
           {/* Signature strip */}
-          <div className="absolute mx-6 mt-4 h-10 flex items-center justify-end pr-4" style={{ top: 'calc(18% + 56px)', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.8)' }}>
+          <motion.div
+            className="absolute mx-6 mt-4 h-10 flex items-center justify-end pr-4"
+            style={{ top: 'calc(18% + 56px)', left: 0, right: 0, backgroundColor: 'rgba(255, 255, 255, 0.8)' }}
+            animate={
+              isCvvFocused
+                ? {
+                    boxShadow: [
+                      '0 0 0 0 rgba(122,31,43,0)',
+                      '0 0 0 4px rgba(122,31,43,0.2)',
+                      '0 0 0 0 rgba(122,31,43,0)',
+                    ],
+                  }
+                : {}
+            }
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
             <span className="font-mono text-[9px] text-ink-muted mr-3">CVV</span>
             <span className="font-mono text-sm text-ink">•••</span>
-          </div>
+          </motion.div>
 
           {/* Brand mark bottom left */}
           <div className="absolute bottom-6 left-6 font-sans font-medium text-[9px] tracking-[0.22em] uppercase text-ink flex items-center">
