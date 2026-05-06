@@ -3,7 +3,7 @@
 import { useForm, Controller, type ResolverResult, type ResolverOptions } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Clock } from 'lucide-react';
 import { buildPaymentFormSchema, type PaymentFormValues } from '@/utils/validation';
 import { detectCardType, formatCardNumber, getCardNumberMaxLength, getCvvLength } from '@/utils/cardDetection';
@@ -101,7 +101,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
         <div className="flex items-center gap-6">
           <button
             onClick={() => setIsSidebarOpen(true)}
-            className="flex items-center gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] rounded-sm"
+            className="flex items-center gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] rounded-sm min-h-[44px] min-w-[44px]"
             aria-label={`Open transaction history, ${history.length} transactions`}
           >
             <Clock size={12} aria-hidden="true" />
@@ -119,70 +119,104 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
       </header>
 
       {/* Main content */}
-      <main className="max-w-[1200px] mx-auto px-6 md:px-12 py-12 md:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
+      <main className="max-w-[1200px] mx-auto px-6 md:px-12 py-8 md:py-12 lg:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 lg:gap-24 items-start">
           {/* Left column - Form */}
-          <div>
+          <div className="order-2 lg:order-1">
             {/* Page title */}
-            <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-ink-muted mb-4">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0 }}
+              className="font-mono text-[10px] tracking-[0.2em] uppercase text-ink-muted mb-4"
+            >
               Confirm payment
-            </p>
-            <h1 className="font-sans font-light text-[42px] md:text-[48px] leading-[1.1] tracking-[-0.025em] text-ink mb-4">
+            </motion.p>
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.08 }}
+              className="font-sans font-light text-[42px] md:text-[48px] leading-[1.1] tracking-[-0.025em] text-ink mb-4"
+            >
               A quiet, <span className="font-serif italic text-accent">considered</span> checkout.
-            </h1>
-            <p className="text-[15px] text-ink-muted mb-10 max-w-[36ch]">
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.16 }}
+              className="text-[15px] text-ink-muted mb-10 max-w-[36ch]"
+            >
               Enter your card details below. Your information is encrypted end-to-end.
-            </p>
+            </motion.p>
 
             {/* Form */}
-            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6" noValidate>
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5" noValidate>
               {/* Cardholder name */}
-              <Input
-                label="Cardholder name"
-                placeholder="Name on the card"
-                error={touchedFields.cardholderName ? errors.cardholderName?.message : undefined}
-                aria-required="true"
-                {...register('cardholderName')}
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.24 }}
+              >
+                <Input
+                  label="Cardholder name"
+                  placeholder="Name on the card"
+                  error={touchedFields.cardholderName ? errors.cardholderName?.message : undefined}
+                  isValid={touchedFields.cardholderName && !errors.cardholderName}
+                  aria-required="true"
+                  {...register('cardholderName')}
+                />
+              </motion.div>
 
               {/* Card number */}
-              <Controller
-                name="cardNumber"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    label="Card number"
-                    placeholder="0000 0000 0000 0000"
-                    value={cardDisplayValue}
-                    onChange={(e) => {
-                      const input = e.target.value;
-                      const rawDigits = input.replace(/\D/g, '');
-                      
-                      const newCardType = detectCardType(rawDigits);
-                      setCardType(newCardType);
-                      cardTypeRef.current = newCardType;
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.3 }}
+              >
+                <Controller
+                  name="cardNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      label="Card number"
+                      placeholder="0000 0000 0000 0000"
+                      value={cardDisplayValue}
+                      onChange={(e) => {
+                        const input = e.target.value;
+                        const rawDigits = input.replace(/\D/g, '');
+                        
+                        const newCardType = detectCardType(rawDigits);
+                        setCardType(newCardType);
+                        cardTypeRef.current = newCardType;
 
-                      const maxLength = getCardNumberMaxLength(newCardType);
-                      const truncated = rawDigits.slice(0, maxLength);
-                      
-                      const formatted = formatCardNumber(truncated, newCardType);
-                      setCardDisplayValue(formatted);
-                      
-                      field.onChange(truncated);
-                    }}
-                    onBlur={field.onBlur}
-                    error={touchedFields.cardNumber ? errors.cardNumber?.message : undefined}
-                    inputMode="numeric"
-                    maxLength={19}
-                    className="font-mono"
-                    aria-required="true"
-                    trailingSlot={<Badge cardType={cardType} visible={cardType !== 'unknown'} />}
-                  />
-                )}
-              />
+                        const maxLength = getCardNumberMaxLength(newCardType);
+                        const truncated = rawDigits.slice(0, maxLength);
+                        
+                        const formatted = formatCardNumber(truncated, newCardType);
+                        setCardDisplayValue(formatted);
+                        
+                        field.onChange(truncated);
+                      }}
+                      onBlur={field.onBlur}
+                      error={touchedFields.cardNumber ? errors.cardNumber?.message : undefined}
+                      isValid={touchedFields.cardNumber && !errors.cardNumber}
+                      inputMode="numeric"
+                      maxLength={19}
+                      className="font-mono"
+                      aria-required="true"
+                      trailingSlot={<Badge cardType={cardType} visible={cardType !== 'unknown'} />}
+                    />
+                  )}
+                />
+              </motion.div>
 
               {/* Expiry + CVV */}
-              <div className="grid grid-cols-2 gap-4">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.36 }}
+                className="grid grid-cols-2 gap-4"
+              >
                 <Input
                   label="Expiry"
                   placeholder="MM/YY"
@@ -190,6 +224,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   maxLength={5}
                   className="font-mono"
                   error={touchedFields.expiry ? errors.expiry?.message : undefined}
+                  isValid={touchedFields.expiry && !errors.expiry}
                   aria-required="true"
                   onKeyDown={(e) => {
                     isBackspaceRef.current = e.key === 'Backspace';
@@ -217,86 +252,104 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   maxLength={getCvvLength(cardType)}
                   className="font-mono"
                   error={touchedFields.cvv ? errors.cvv?.message : undefined}
+                  isValid={touchedFields.cvv && !errors.cvv}
                   aria-required="true"
                   onFocus={() => setIsCvvFocused(true)}
                   {...register('cvv', {
                     onBlur: () => setIsCvvFocused(false),
                   })}
                 />
-              </div>
+              </motion.div>
 
               {/* Amount */}
-              <Controller
-                name="amount"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    label="Amount"
-                    placeholder="0.00"
-                    inputMode="decimal"
-                    value={field.value ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const parsed = parseFloat(value);
-                      field.onChange(isNaN(parsed) ? undefined : parsed);
-                    }}
-                    onBlur={field.onBlur}
-                    error={touchedFields.amount ? errors.amount?.message : undefined}
-                    aria-required="true"
-                    trailingSlot={
-                      <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em]">
-                        <button
-                          type="button"
-                          onClick={() => handleCurrencyChange('INR')}
-                          className={cn(
-                            'transition-colors',
-                            currency === 'INR'
-                              ? 'text-accent border-b border-accent font-medium'
-                              : 'text-ink-muted hover:text-ink'
-                          )}
-                        >
-                          INR
-                        </button>
-                        <span className="text-ink-subtle">/</span>
-                        <button
-                          type="button"
-                          onClick={() => handleCurrencyChange('USD')}
-                          className={cn(
-                            'transition-colors',
-                            currency === 'USD'
-                              ? 'text-accent border-b border-accent font-medium'
-                              : 'text-ink-muted hover:text-ink'
-                          )}
-                        >
-                          USD
-                        </button>
-                      </div>
-                    }
-                  />
-                )}
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.42 }}
+              >
+                <Controller
+                  name="amount"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      label="Amount"
+                      placeholder="0.00"
+                      inputMode="decimal"
+                      value={field.value ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const parsed = parseFloat(value);
+                        field.onChange(isNaN(parsed) ? undefined : parsed);
+                      }}
+                      onBlur={field.onBlur}
+                      error={touchedFields.amount ? errors.amount?.message : undefined}
+                      isValid={touchedFields.amount && !errors.amount}
+                      aria-required="true"
+                      trailingSlot={
+                        <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em]">
+                          <button
+                            type="button"
+                            onClick={() => handleCurrencyChange('INR')}
+                            className={cn(
+                              'transition-colors',
+                              currency === 'INR'
+                                ? 'text-accent border-b border-accent font-medium'
+                                : 'text-ink-muted hover:text-ink'
+                            )}
+                          >
+                            INR
+                          </button>
+                          <span className="text-ink-subtle">/</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCurrencyChange('USD')}
+                            className={cn(
+                              'transition-colors',
+                              currency === 'USD'
+                                ? 'text-accent border-b border-accent font-medium'
+                                : 'text-ink-muted hover:text-ink'
+                            )}
+                          >
+                            USD
+                          </button>
+                        </div>
+                      }
+                    />
+                  )}
+                />
+              </motion.div>
 
               {/* Submit button */}
-              <div className="mt-8 flex items-center gap-4">
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1], delay: 0.54 }}
+                className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+              >
                 <Button
                   type="submit"
                   variant="primary"
                   size="lg"
                   loading={isSubmitting}
                   disabled={!isValid || isSubmitting}
-                  className='flex flex-row gap-3'
+                  className='flex flex-row gap-3 w-full sm:w-auto'
                 >
                   Pay securely
                 </Button>
-                <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-ink-subtle">
+                <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-ink-subtle text-center sm:text-left">
                   256-bit encryption
                 </span>
-              </div>
+              </motion.div>
             </form>
           </div>
 
           {/* Right column - Card preview */}
-          <div className="lg:sticky lg:top-[88px] lg:self-start">
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease: [0.2, 0, 0, 1], delay: 0.2 }}
+            className="order-1 lg:order-2 lg:sticky lg:top-[88px] lg:self-start w-full max-w-[340px] mx-auto lg:max-w-none"
+          >
             <CardPreview
               cardholderName={watch('cardholderName') || ''}
               cardNumber={watch('cardNumber') || ''}
@@ -305,7 +358,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               isCvvFocused={isCvvFocused}
               isProcessing={status.kind === 'processing'}
             />
-          </div>
+          </motion.div>
         </div>
       </main>
 
