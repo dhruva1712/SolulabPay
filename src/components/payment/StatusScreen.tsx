@@ -13,9 +13,10 @@ interface StatusScreenProps {
   onRetry: () => void;
   onReset: () => void;
   formattedAmount: string;
+  headingRef?: React.RefObject<HTMLHeadingElement | null>;
 }
 
-export default function StatusScreen({ status, onRetry, onReset, formattedAmount }: StatusScreenProps) {
+export default function StatusScreen({ status, onRetry, onReset, formattedAmount, headingRef }: StatusScreenProps) {
   const [copied, setCopied] = useState(false);
 
   if (status.kind === 'idle' || status.kind === 'processing') {
@@ -43,7 +44,7 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
               backgroundColor: 'var(--accent)',
             }}
           />
-          ATELIER
+          SoluLab
         </div>
         <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted">
           Secure · TLS 1.3
@@ -78,7 +79,7 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 Payment confirmed
               </p>
 
-              <h1 className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
+              <h1 ref={headingRef} className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
                 Paid <span className="font-serif italic">instantly</span>.
               </h1>
 
@@ -96,7 +97,7 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 {status.transaction.attempts > 1 ? 's' : ''}
               </p>
 
-              <Button variant="ghost" size="sm" onClick={handleCopyTxId}>
+              <Button variant="ghost" size="sm" onClick={handleCopyTxId} className='flex flex-row gap-3'>
                 <Copy size={12} />
                 <span className="font-mono text-[10px] tracking-[0.1em] uppercase">
                   {copied ? 'Copied!' : 'Copy ID'}
@@ -135,7 +136,7 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 Payment declined
               </p>
 
-              <h1 className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
+              <h1 ref={headingRef} className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
                 <span className="font-serif italic">Something</span> went wrong.
               </h1>
 
@@ -193,7 +194,7 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 Request timed out
               </p>
 
-              <h1 className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
+              <h1 ref={headingRef} className="font-sans font-light text-[26px] tracking-[-0.015em] text-ink" tabIndex={-1}>
                 The gateway took too <span className="font-serif italic">long</span>.
               </h1>
 

@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Payment Gateway
 
-## Getting Started
+A payment gateway UI built with Next.js 15 (App Router) and TypeScript. Demonstrates a complete payment lifecycle — form validation, gateway simulation, retry logic, and transaction history — without any third-party payment SDK.
 
-First, run the development server:
+## Stack
+
+- **Next.js 15** (App Router, Turbopack)
+- **TypeScript** — strict mode, no `any`
+- **Zustand** — global state with localStorage persistence for transaction history
+- **react-hook-form + zod** — form validation with real-time per-field errors
+- **Framer Motion** — page transitions, card flip animation, status screen entrances
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/
+    api/pay/        # Mock gateway route handler
+    page.tsx        # Root page — orchestrates form and status screens
+  components/
+    payment/        # PaymentForm, CardPreview, StatusScreen, TransactionHistory, TransactionDetail, ProcessingOverlay
+    ui/             # Button, Input, Badge — design system primitives
+  hooks/
+    usePayment.ts   # Payment lifecycle hook — fetch, abort, retry, store writes
+  store/
+    paymentStore.ts # Zustand store — status, history, actions
+  types/
+    payment.ts      # All shared types and constants
+  utils/
+    cardDetection.ts  # Card type detection, number formatting
+    validation.ts     # Zod schemas, Luhn check
+    formatting.ts     # Currency, timestamp, masking helpers
+    cn.ts             # Tailwind class composition
+```
 
-## Learn More
+## Architecture notes
 
-To learn more about Next.js, take a look at the following resources:
+**State management:** Zustand was chosen over Redux Toolkit for this scope. The state surface is small — payment lifecycle status (a discriminated union of five states), transaction history, and the current transaction ID. Zustand's `persist` middleware handles localStorage serialisation with `partialize` to ensure only `history` survives a page refresh. Persisting `status` would leave users stuck in a "processing" state after a hard refresh.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Payment lifecycle:** modelled as a TypeScript discriminated union (`PaymentStatus`) with kinds: `idle`, `processing`, `success`, `failed`, `timeout`. Each state carries only the data relevant to that state — the `success` state carries the full transaction, `failed` carries the reason and retry eligibility, and so on. This makes exhaustive handling straightforward throughout the component tree.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Idempotency:** a UUID is generated once per logical transaction via `crypto.randomUUID()` before the first attempt. The same ID is passed on every retry, so the transaction history never contains duplicates for the same payment attempt sequence.
 
-## Deploy on Vercel
+**Timeout handling:** the frontend sets a 6-second `AbortController` signal on every fetch. The mock gateway has a 15% chance of responding after 8 seconds — in normal flow this response is never received. If the abort fires, the `AbortError` is caught, distinguished from other network errors, and the timeout lifecycle state is set.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Form validation:** `buildPaymentFormSchema` is a factory function that takes the detected card type and returns a zod schema with the correct card number length (15 for Amex, 16 otherwise) and CVV length (3 or 4). The schema is rebuilt via a ref-based resolver whenever card type changes, without resetting the form.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Card number input:** raw digits are stored in react-hook-form; formatted display is maintained in a separate `useState`. This keeps the store and API payload clean while the UI shows formatted output.
+
+## Gateway simulation
+
+The mock route at `/api/pay` returns one of three outcomes, weighted server-side:
+
+| Outcome | Weight | Behaviour |
+|---------|--------|-----------|
+| Success | 60% | Responds after 1.5–2.2s |
+| Failed  | 25% | Responds after 1.5–2.2s with a reason string |
+| Timeout | 15% | Responds after 8s (client aborts at 6s) |
+
+During development, the header `x-force-outcome: success | failed | timeout` overrides the random pick for predictable testing.
+
+## Assumptions
+
+- Currency conversion is not implemented — INR and USD are display labels only; amounts are stored as entered.
+- The card preview shows "SoluLab" brand name — in a real integration this would reflect the merchant.
+- Luhn validation runs client-side only. The server validates card number format (digit count) but not the Luhn checksum — a real gateway would perform its own validation.
+- Transaction history is stored in `localStorage` under the key `payment-gateway-v1`. Clearing browser storage resets history.
+- The 3-attempt retry limit is per logical transaction (one `txId`). Starting a new payment resets the counter.
+
+## What I would improve given more time
+
+- **Animations:** a number ticker on the amount display as the user types, and a shimmer/holographic effect on the card preview.
+- **Accessibility:** a live region (`aria-live="polite"`) announcing payment status changes to screen readers, beyond the current focus management.
+- **Testing:** unit tests for the Luhn check, card detection, and expiry validation; integration tests for the retry logic using MSW to mock the gateway.
+- **History UX:** pagination or a "load more" pattern for long transaction lists; filtering by status.
+- **Real persistence:** replace `localStorage` with a proper backend store so history survives across devices and browsers.
+- **Error boundaries:** React error boundaries around the payment form and status screens to handle unexpected render failures gracefully.

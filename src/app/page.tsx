@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePayment } from '@/hooks/usePayment';
 import { useStatus } from '@/store/paymentStore';
@@ -17,6 +17,7 @@ export default function Home() {
   const beginTransaction = usePaymentStore((s) => s.beginTransaction);
 
   const lastValuesRef = useRef<PaymentFormValues | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const [formattedAmount, setFormattedAmount] = useState('');
 
   const handleSubmit = useCallback(
@@ -49,6 +50,17 @@ export default function Home() {
   const showForm = status.kind === 'idle' || status.kind === 'processing';
   const showStatus = status.kind === 'success' || status.kind === 'failed' || status.kind === 'timeout';
 
+  // ESC key handler for status screen
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showStatus) {
+        handleReset();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showStatus, handleReset]);
+
   return (
     <main className="relative">
       <AnimatePresence mode="wait">
@@ -71,12 +83,14 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+            onAnimationComplete={() => headingRef.current?.focus()}
           >
             <StatusScreen
               status={status}
               onRetry={handleRetry}
               onReset={handleReset}
               formattedAmount={formattedAmount}
+              headingRef={headingRef}
             />
           </motion.div>
         )}

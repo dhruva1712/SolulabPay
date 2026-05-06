@@ -55,7 +55,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 : 'focus:border-accent focus:shadow-[0_0_0_3px_var(--focus-ring)]',
               className
             )}
-            aria-invalid={!!error}
+            aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? errorId : hint ? hintId : undefined}
             {...props}
           />

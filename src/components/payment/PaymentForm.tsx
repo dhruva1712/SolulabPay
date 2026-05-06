@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, Controller, type FieldValues, type ResolverResult, type ResolverOptions } from 'react-hook-form';
+import { useForm, Controller, type ResolverResult, type ResolverOptions } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { buildPaymentFormSchema, type PaymentFormValues } from '@/utils/validation';
@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import CardPreview from '@/components/payment/CardPreview';
+import TransactionHistory from '@/components/payment/TransactionHistory';
 import { cn } from '@/utils/cn';
 import type { CardType, Currency } from '@/types/payment';
 
@@ -113,12 +114,13 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
             </p>
 
             {/* Form */}
-            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6" noValidate>
               {/* Cardholder name */}
               <Input
                 label="Cardholder name"
                 placeholder="As it appears on the card"
                 error={errors.cardholderName?.message}
+                aria-required="true"
                 {...register('cardholderName')}
               />
 
@@ -152,6 +154,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                     inputMode="numeric"
                     maxLength={19}
                     className="font-mono"
+                    aria-required="true"
                     trailingSlot={<Badge cardType={cardType} visible={cardType !== 'unknown'} />}
                   />
                 )}
@@ -166,6 +169,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   maxLength={5}
                   className="font-mono"
                   error={errors.expiry?.message}
+                  aria-required="true"
                   onKeyDown={(e) => {
                     isBackspaceRef.current = e.key === 'Backspace';
                   }}
@@ -192,6 +196,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   maxLength={getCvvLength(cardType)}
                   className="font-mono"
                   error={errors.cvv?.message}
+                  aria-required="true"
                   onFocus={() => setIsCvvFocused(true)}
                   {...register('cvv', {
                     onBlur: () => setIsCvvFocused(false),
@@ -216,6 +221,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                     }}
                     onBlur={field.onBlur}
                     error={errors.amount?.message}
+                    aria-required="true"
                     trailingSlot={
                       <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em]">
                         <button
@@ -292,14 +298,9 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               isCvvFocused={isCvvFocused}
             />
 
-            {/* Transaction history placeholder */}
+            {/* Transaction history */}
             <div className="mt-8">
-              <h2 className="font-sans font-light text-[24px] text-ink mb-4">
-                Recent <span className="font-serif italic">transactions</span>
-              </h2>
-              <p className="text-sm text-ink-subtle">
-                Your transaction history will appear here.
-              </p>
+              <TransactionHistory />
             </div>
           </div>
         </div>
