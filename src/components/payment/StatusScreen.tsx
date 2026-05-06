@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Copy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import TransactionSidebar from '@/components/payment/TransactionSidebar';
+import { useHistory } from '@/store/paymentStore';
 import { truncateTxId } from '@/utils/formatting';
 import { MAX_ATTEMPTS } from '@/types/payment';
 import type { PaymentStatus } from '@/types/payment';
@@ -18,6 +20,8 @@ interface StatusScreenProps {
 
 export default function StatusScreen({ status, onRetry, onReset, formattedAmount, headingRef }: StatusScreenProps) {
   const [copied, setCopied] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const history = useHistory();
 
   if (status.kind === 'idle' || status.kind === 'processing') {
     return null;
@@ -46,8 +50,23 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
           />
           SoluLab
         </div>
-        <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted">
-          Secure · TLS 1.3
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex items-center gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] rounded-sm"
+            aria-label={`Open transaction history, ${history.length} transactions`}
+          >
+            <Clock size={12} aria-hidden="true" />
+            Transactions
+            {history.length > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 bg-accent text-white font-mono text-[9px] rounded-full">
+                {history.length > 9 ? '9+' : history.length}
+              </span>
+            )}
+          </button>
+          <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hidden sm:block">
+            Secure · TLS 1.3
+          </span>
         </div>
       </header>
 
@@ -233,6 +252,16 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
           )}
         </div>
       </main>
+
+      {/* Transaction Sidebar */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <TransactionSidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

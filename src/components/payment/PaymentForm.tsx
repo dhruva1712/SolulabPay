@@ -3,13 +3,16 @@
 import { useForm, Controller, type ResolverResult, type ResolverOptions } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { Clock } from 'lucide-react';
 import { buildPaymentFormSchema, type PaymentFormValues } from '@/utils/validation';
 import { detectCardType, formatCardNumber, getCardNumberMaxLength, getCvvLength } from '@/utils/cardDetection';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import CardPreview from '@/components/payment/CardPreview';
-import TransactionHistory from '@/components/payment/TransactionHistory';
+import TransactionSidebar from '@/components/payment/TransactionSidebar';
+import { useHistory } from '@/store/paymentStore';
 import { cn } from '@/utils/cn';
 import type { CardType, Currency } from '@/types/payment';
 
@@ -23,8 +26,10 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
   const [isCvvFocused, setIsCvvFocused] = useState(false);
   const [currency, setCurrency] = useState<Currency>('INR');
   const [cardDisplayValue, setCardDisplayValue] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isBackspaceRef = useRef(false);
   const cardTypeRef = useRef<CardType>('unknown');
+  const history = useHistory();
 
   // Custom resolver that reads latest cardType from ref
   const resolver = useCallback(
@@ -45,10 +50,10 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
     setValue,
     trigger,
     clearErrors,
-    formState: { errors, isValid },
+    formState: { errors, isValid, touchedFields },
   } = useForm<PaymentFormValues>({
     resolver,
-    mode: 'onBlur',
+    mode: 'all',
     reValidateMode: 'onChange',
     defaultValues: {
       cardholderName: '',
@@ -92,8 +97,23 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
           />
           SoluLab
         </div>
-        <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted">
-          Secure · TLS 1.3
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex items-center gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] rounded-sm"
+            aria-label={`Open transaction history, ${history.length} transactions`}
+          >
+            <Clock size={12} aria-hidden="true" />
+            Transactions
+            {history.length > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 bg-accent text-white font-mono text-[9px] rounded-full">
+                {history.length > 9 ? '9+' : history.length}
+              </span>
+            )}
+          </button>
+          <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hidden sm:block">
+            Secure · TLS 1.3
+          </span>
         </div>
       </header>
 
@@ -118,8 +138,8 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               {/* Cardholder name */}
               <Input
                 label="Cardholder name"
-                placeholder="As it appears on the card"
-                error={errors.cardholderName?.message}
+                placeholder="Name on the card"
+                error={touchedFields.cardholderName ? errors.cardholderName?.message : undefined}
                 aria-required="true"
                 {...register('cardholderName')}
               />
@@ -150,7 +170,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                       field.onChange(truncated);
                     }}
                     onBlur={field.onBlur}
-                    error={errors.cardNumber?.message}
+                    error={touchedFields.cardNumber ? errors.cardNumber?.message : undefined}
                     inputMode="numeric"
                     maxLength={19}
                     className="font-mono"
@@ -168,7 +188,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   inputMode="numeric"
                   maxLength={5}
                   className="font-mono"
-                  error={errors.expiry?.message}
+                  error={touchedFields.expiry ? errors.expiry?.message : undefined}
                   aria-required="true"
                   onKeyDown={(e) => {
                     isBackspaceRef.current = e.key === 'Backspace';
@@ -195,7 +215,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   inputMode="numeric"
                   maxLength={getCvvLength(cardType)}
                   className="font-mono"
-                  error={errors.cvv?.message}
+                  error={touchedFields.cvv ? errors.cvv?.message : undefined}
                   aria-required="true"
                   onFocus={() => setIsCvvFocused(true)}
                   {...register('cvv', {
@@ -220,7 +240,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                       field.onChange(isNaN(parsed) ? undefined : parsed);
                     }}
                     onBlur={field.onBlur}
-                    error={errors.amount?.message}
+                    error={touchedFields.amount ? errors.amount?.message : undefined}
                     aria-required="true"
                     trailingSlot={
                       <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em]">
@@ -263,23 +283,9 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   size="lg"
                   loading={isSubmitting}
                   disabled={!isValid || isSubmitting}
+                  className='flex flex-row gap-3'
                 >
                   Pay securely
-                  {!isSubmitting && (
-                    <svg
-                      width="14"
-                      height="8"
-                      viewBox="0 0 14 8"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M0 4H13M13 4L9 1M13 4L9 7"
-                        stroke="currentColor"
-                        strokeWidth="1.2"
-                      />
-                    </svg>
-                  )}
                 </Button>
                 <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-ink-subtle">
                   256-bit encryption
@@ -289,7 +295,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
           </div>
 
           {/* Right column - Card preview */}
-          <div className="lg:sticky lg:top-[88px]">
+          <div className="lg:sticky lg:top-[88px] lg:self-start">
             <CardPreview
               cardholderName={watch('cardholderName') || ''}
               cardNumber={watch('cardNumber') || ''}
@@ -297,11 +303,6 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               cardType={cardType}
               isCvvFocused={isCvvFocused}
             />
-
-            {/* Transaction history */}
-            <div className="mt-8">
-              <TransactionHistory />
-            </div>
           </div>
         </div>
       </main>
@@ -315,6 +316,16 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
           Assignment Demo
         </div>
       </footer>
+
+      {/* Transaction Sidebar */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <TransactionSidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
