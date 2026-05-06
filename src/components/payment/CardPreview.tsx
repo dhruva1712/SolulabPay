@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCardNumber } from '@/utils/cardDetection';
 import type { CardType } from '@/types/payment';
@@ -11,6 +11,7 @@ interface CardPreviewProps {
   expiry: string;
   cardType: CardType;
   isCvvFocused: boolean;
+  isProcessing?: boolean;
 }
 
 const cardNetworkLabels: Record<CardType, string> = {
@@ -26,31 +27,41 @@ export default function CardPreview({
   expiry,
   cardType,
   isCvvFocused,
+  isProcessing = false,
 }: CardPreviewProps) {
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
-    const halfWidth = rect.width / 2;
-    const halfHeight = rect.height / 2;
+  // Detect touch devices
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
-    const rotateY = (dx / halfWidth) * 6;
-    const rotateX = -(dy / halfHeight) * 6;
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isTouchDevice || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width; 
+    const y = (e.clientY - rect.top) / rect.height;
+    setMousePos({ x, y });
+  }, [isTouchDevice]);
 
-    setTilt({ x: rotateX, y: rotateY });
+  const handleMouseEnter = () => {
+    if (isTouchDevice) return;
+    setIsHovered(true);
   };
 
   const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
+    if (isTouchDevice) return;
+    setIsHovered(false);
+    setMousePos({ x: 0.5, y: 0.5 });
   };
 
   const formattedNumber = cardNumber ? formatCardNumber(cardNumber, cardType) : '•••• •••• •••• ••••';
   const displayName = cardholderName || 'YOUR NAME';
   const displayExpiry = expiry || 'MM/YY';
+
+  // Tilt follows mouse position — max 14 degrees
+  const rotateX = isHovered ? (mousePos.y - 0.5) * -14 : 0;
+  const rotateY = isHovered ? (mousePos.x - 0.5) * 14 : 0;
 
   return (
     <div style={{ perspective: '1200px' }} className="w-full">
@@ -62,6 +73,7 @@ export default function CardPreview({
       >
         {/* Front face */}
         <motion.div
+          ref={cardRef}
           className="absolute inset-0 overflow-hidden"
           style={{
             backfaceVisibility: 'hidden',
@@ -69,13 +81,15 @@ export default function CardPreview({
             borderRadius: 0,
             background: 'linear-gradient(135deg, #F5EFE6 0%, #ECE3D2 100%)',
             boxShadow: 'var(--shadow-card-elevated)',
-            rotateX: tilt.x,
-            rotateY: tilt.y,
           }}
-          initial={{ rotate: -1, y: 0 }}
-          whileHover={{ rotate: 0, y: -4 }}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+          animate={{
+            rotateX,
+            rotateY,
+            scale: isHovered ? 1.02 : 1,
+          }}
+          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
           onMouseMove={handleMouseMove}
+          onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           {/* Noise texture overlay */}
@@ -87,8 +101,105 @@ export default function CardPreview({
               opacity: 0.06,
               backgroundImage:
                 "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")",
+              zIndex: 1,
             }}
           />
+
+          {/* Holographic shimmer layer */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 0,
+              opacity: isHovered ? 1 : 0,
+              transition: 'opacity 350ms ease',
+              background: `radial-gradient(circle at ${mousePos.x * 100}% ${mousePos.y * 100}%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 220, 180, 0.22) 25%, rgba(200, 180, 255, 0.18) 50%, transparent 70%)`,
+              pointerEvents: 'none',
+              mixBlendMode: 'overlay',
+              zIndex: 2,
+            }}
+          />
+
+          {/* Rainbow iridescent layer */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 0,
+              opacity: isHovered ? 0.15 : 0,
+              transition: 'opacity 400ms ease',
+              background: `linear-gradient(${105 + mousePos.x * 60}deg, rgba(255, 0, 128, 0) 0%, rgba(255, 0, 128, 0.3) 20%, rgba(255, 200, 0, 0.3) 35%, rgba(0, 255, 128, 0.3) 50%, rgba(0, 128, 255, 0.3) 65%, rgba(128, 0, 255, 0.3) 80%, rgba(255, 0, 128, 0) 100%)`,
+              pointerEvents: 'none',
+              mixBlendMode: 'color',
+              zIndex: 3,
+            }}
+          />
+
+          {/* Specular highlight */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 0,
+              opacity: isHovered ? 1 : 0,
+              transition: 'opacity 250ms ease',
+              background: `radial-gradient(circle at ${mousePos.x * 100}% ${mousePos.y * 100}%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 25%, transparent 45%)`,
+              pointerEvents: 'none',
+              mixBlendMode: 'screen',
+              zIndex: 4,
+            }}
+          />
+
+          {/* Processing sweep animation */}
+          <AnimatePresence>
+            {isProcessing && (
+              <motion.div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 5,
+                  pointerEvents: 'none',
+                  borderRadius: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Sweep element */}
+                <motion.div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    width: '40%',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)',
+                    filter: 'blur(8px)',
+                  }}
+                  animate={{ left: ['-40%', '140%'] }}
+                  transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    repeatDelay: 0.4,
+                  }}
+                />
+
+                {/* Border pulse */}
+                <motion.div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    border: '1px solid rgba(122, 31, 43, 0.3)',
+                    borderRadius: 0,
+                  }}
+                  animate={{ opacity: [0.3, 0.8, 0.3] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Card content */}
           <div className="flex flex-col justify-between h-full p-7">
@@ -116,8 +227,7 @@ export default function CardPreview({
                   height: '34px',
                   background: 'linear-gradient(135deg, #C9B894 0%, #A89669 50%, #8C7A4F 100%)',
                   borderRadius: '4px',
-                  boxShadow:
-                    'inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15)',
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15)${isHovered ? `, ${(mousePos.x - 0.5) * 6}px ${(mousePos.y - 0.5) * 6}px 12px rgba(255,255,255,0.4)` : ', 0 0 0 transparent'}`,
                 }}
               >
                 <div

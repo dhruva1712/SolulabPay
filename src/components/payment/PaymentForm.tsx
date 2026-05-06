@@ -12,7 +12,7 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import CardPreview from '@/components/payment/CardPreview';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
-import { useHistory } from '@/store/paymentStore';
+import { useHistory, useStatus } from '@/store/paymentStore';
 import { cn } from '@/utils/cn';
 import type { CardType, Currency } from '@/types/payment';
 
@@ -30,6 +30,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
   const isBackspaceRef = useRef(false);
   const cardTypeRef = useRef<CardType>('unknown');
   const history = useHistory();
+  const status = useStatus();
 
   // Custom resolver that reads latest cardType from ref
   const resolver = useCallback(
@@ -302,6 +303,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               expiry={watch('expiry') || ''}
               cardType={cardType}
               isCvvFocused={isCvvFocused}
+              isProcessing={status.kind === 'processing'}
             />
           </div>
         </div>
