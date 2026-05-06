@@ -405,8 +405,11 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                   variant="primary"
                   size="lg"
                   loading={isSubmitting}
-                  disabled={!isValid || isSubmitting}
-                  className='flex flex-row gap-3 w-full sm:w-auto'
+                  disabled={isSubmitting}
+                  className={cn(
+                    'flex flex-row gap-3 w-full sm:w-auto',
+                    !isValid && !isSubmitting && 'opacity-60 cursor-not-allowed'
+                  )}
                 >
                   Pay securely
                 </Button>
@@ -427,7 +430,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
             <CardPreview
               cardholderName={watch('cardholderName') || ''}
               cardNumber={watch('cardNumber') || ''}
-              expiry={watch('expiry') || ''}
+              expiry={expiryDisplay}
               cardType={cardType}
               isCvvFocused={isCvvFocused}
               isProcessing={status.kind === 'processing'}

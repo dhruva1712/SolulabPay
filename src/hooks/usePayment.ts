@@ -13,20 +13,24 @@ export function usePayment() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const submitPayment = useCallback(
-    async (values: PaymentFormValues) => {
+    async (values: PaymentFormValues, forceTxId?: string) => {
       // Step 1 — Determine txId and attempt number
-      let txId: string | null = null;
-      let attempt = 1;
+      let txId: string;
+      let attempt: number;
 
-      if (store.status.kind === 'idle') {
-        txId = store.currentTxId;
+      if (forceTxId) {
+        // Fresh transaction — txId passed directly from beginTransaction()
+        txId = forceTxId;
         attempt = 1;
-      } else if (store.status.kind === 'failed' || store.status.kind === 'timeout') {
-        txId = store.status.txId;
-        attempt = store.status.attempt + 1;
+      } else {
+        // Retry — read from current status
+        const currentStatus = store.status;
+        if (currentStatus.kind !== 'failed' && currentStatus.kind !== 'timeout') return;
+        txId = currentStatus.txId;
+        attempt = currentStatus.attempt + 1;
       }
 
-      if (txId === null) return;
+      if (!txId) return;
 
       attempt = Math.min(attempt, MAX_ATTEMPTS);
 

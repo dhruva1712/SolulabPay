@@ -22,22 +22,31 @@ export default function Home() {
 
   const handleSubmit = useCallback(
     async (values: PaymentFormValues) => {
-      if (status.kind === 'idle') {
-        beginTransaction();
+      let txId: string;
+
+      if (status.kind === 'idle' || status.kind === 'success') {
+        // Fresh payment — begin transaction and capture txId synchronously
+        txId = beginTransaction();
+      } else if (status.kind === 'failed' || status.kind === 'timeout') {
+        // Retry — txId already in store status
+        await submitPayment(values);
+        return;
+      } else {
+        return; // processing — do nothing
       }
 
       lastValuesRef.current = values;
       setFormattedAmount(formatCurrency(values.amount, values.currency));
 
-      await submitPayment(values);
+      // Pass txId directly — no store read delay
+      await submitPayment(values, txId);
     },
-    [status.kind, beginTransaction, submitPayment]
+    [status, beginTransaction, submitPayment, formatCurrency]
   );
 
   const handleRetry = useCallback(async () => {
-    if (lastValuesRef.current) {
-      await submitPayment(lastValuesRef.current);
-    }
+    if (!lastValuesRef.current) return;
+    await submitPayment(lastValuesRef.current);
   }, [submitPayment]);
 
   const handleReset = useCallback(() => {
