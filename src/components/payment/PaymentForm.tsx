@@ -184,16 +184,14 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
         <div className="min-h-screen bg-bg">
             {/* Header */}
             <header className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-border px-6 md:px-12 py-4 flex justify-between items-center">
-                <div className="font-sans font-medium text-[13px] tracking-[0.2em] uppercase text-ink flex items-center">
-                    <div
-                        className="inline-block mr-2"
-                        style={{
-                            width: '5px',
-                            height: '5px',
-                            backgroundColor: 'var(--accent)',
-                        }}
+                <div className="font-sans gap-3 font-medium text-[13px] tracking-[0.2em] uppercase text-ink flex items-center">
+                    <img
+                        src="/logo.svg"
+                        alt="SoluLab"
+                        className="h-7 w-auto"
+                        style={{ display: 'block' }}
                     />
-                    SoluLab
+                     SoluLab
                 </div>
                 <div className="flex items-center gap-6">
                     <button
@@ -464,9 +462,6 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                                         </svg>
                                     </span>
                                 </Button>
-                                <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-ink-subtle text-center sm:text-left">
-                                    256-bit encryption
-                                </span>
                             </motion.div>
                         </form>
                     </div>

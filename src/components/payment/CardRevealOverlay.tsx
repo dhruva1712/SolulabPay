@@ -189,7 +189,7 @@ export default function CardRevealOverlay({
               transition={{ delay: 0.85, duration: 0.4 }}
               className="font-mono text-[10px] pt-5 tracking-[0.1em] uppercase text-ink-subtle"
             >
-              256-bit encryption · TLS 1.3
+             TLS 1.3
             </motion.p>
           </div>
         </motion.div>

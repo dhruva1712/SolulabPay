@@ -77,7 +77,7 @@ export default function CardPreview({
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isTouchDevice || prefersReducedMotion || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width; 
+    const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     setMousePos({ x, y });
   }, [isTouchDevice, prefersReducedMotion]);
@@ -282,15 +282,12 @@ export default function CardPreview({
             {/* Top row */}
             <div className="flex justify-between items-start">
               {/* Brand mark */}
-              <div className="font-sans font-medium text-[11px] tracking-[0.22em] uppercase text-ink flex items-center">
-                <div
-                  className="inline-block mr-2"
-                  style={{
-                    width: '5px',
-                    height: '5px',
-                    backgroundColor: 'var(--accent)',
-                    verticalAlign: 'middle',
-                  }}
+              <div className="font-sans gap-3 flex flex-row font-medium text-[11px] tracking-[0.22em] uppercase text-ink flex items-center">
+                <img
+                  src="/logo.svg"
+                  alt="SoluLab"
+                  className="h-7 w-auto"
+                  style={{ display: 'block' }}
                 />
                 SoluLab
               </div>
@@ -465,12 +462,12 @@ export default function CardPreview({
             animate={
               isCvvFocused
                 ? {
-                    boxShadow: [
-                      '0 0 0 0 rgba(122,31,43,0)',
-                      '0 0 0 4px rgba(122,31,43,0.2)',
-                      '0 0 0 0 rgba(122,31,43,0)',
-                    ],
-                  }
+                  boxShadow: [
+                    '0 0 0 0 rgba(122,31,43,0)',
+                    '0 0 0 4px rgba(122,31,43,0.2)',
+                    '0 0 0 0 rgba(122,31,43,0)',
+                  ],
+                }
                 : {}
             }
             transition={{ duration: 1.5, repeat: Infinity }}
@@ -480,14 +477,12 @@ export default function CardPreview({
           </motion.div>
 
           {/* Brand mark bottom left */}
-          <div className="absolute bottom-6 left-6 font-sans font-medium text-[9px] tracking-[0.22em] uppercase text-ink flex items-center">
-            <div
-              className="inline-block mr-1.5"
-              style={{
-                width: '4px',
-                height: '4px',
-                backgroundColor: 'var(--accent)',
-              }}
+          <div className="absolute bottom-6 left-6 font-sans flex flex-row gap-3 font-medium text-[9px] tracking-[0.22em] uppercase text-ink flex items-center">
+            <img
+              src="/logo.svg"
+              alt="SoluLab"
+              className="h-7 w-auto"
+              style={{ display: 'block' }}
             />
             Solulab
           </div>

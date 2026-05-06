@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { useHistory } from '@/store/paymentStore';
 import TransactionHistory from '@/components/payment/TransactionHistory';
 import { formatCurrency, formatTimestamp, truncateTxId } from '@/utils/formatting';
 import Button from '@/components/ui/Button';
 import type { Transaction } from '@/types/payment';
 import { MAX_ATTEMPTS } from '@/types/payment';
+import { PaymentReceipt } from '@/components/payment/PaymentReceipt';
+import { useDownloadReceipt } from '@/hooks/useDownloadReceipt';
 
 interface TransactionSidebarProps {
   isOpen: boolean;
@@ -20,6 +22,8 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const { downloadReceipt, isDownloading } = useDownloadReceipt();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -243,12 +247,29 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                       {copied ? 'Copied!' : 'Copy transaction ID'}
                     </span>
                   </Button>
+
+                  {/* Download receipt button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={isDownloading}
+                    disabled={isDownloading}
+                    onClick={() => downloadReceipt(selectedTx, receiptRef)}
+                  >
+                    <div className='flex flex-row gap-3 items-center'>
+                    {!isDownloading && <Download size={12} aria-hidden="true" />}
+                    {isDownloading ? 'Generating PDF...' : 'Download Receipt'}
+                    </div>
+                  </Button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </motion.div>
+
+      {/* Off-screen receipt for PDF generation */}
+      {selectedTx && <PaymentReceipt transaction={selectedTx} receiptRef={receiptRef} />}
     </>
   );
 }

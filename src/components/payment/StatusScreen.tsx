@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Clock } from 'lucide-react';
+import { Copy, Clock, Download } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { CountUp } from '@/components/ui/CountUp';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
@@ -11,6 +11,8 @@ import { useHistory } from '@/store/paymentStore';
 import { truncateTxId } from '@/utils/formatting';
 import { MAX_ATTEMPTS } from '@/types/payment';
 import type { PaymentStatus, Currency } from '@/types/payment';
+import { PaymentReceipt } from '@/components/payment/PaymentReceipt';
+import { useDownloadReceipt } from '@/hooks/useDownloadReceipt';
 
 interface StatusScreenProps {
   status: PaymentStatus;
@@ -87,6 +89,8 @@ export default function StatusScreen({
   const [copied, setCopied] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const history = useHistory();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const { downloadReceipt, isDownloading } = useDownloadReceipt();
 
   if (status.kind === 'idle' || status.kind === 'processing') {
     return null;
@@ -105,13 +109,11 @@ export default function StatusScreen({
       {/* Header */}
       <header className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-border px-6 md:px-12 py-4 flex justify-between items-center">
         <div className="font-sans font-medium text-[13px] tracking-[0.2em] uppercase text-ink flex items-center">
-          <div
-            className="inline-block mr-2"
-            style={{
-              width: '5px',
-              height: '5px',
-              backgroundColor: 'var(--accent)',
-            }}
+          <img
+            src="/logo.svg"
+            alt="SoluLab"
+            className="h-7 w-auto"
+            style={{ display: 'block' }}
           />
           SoluLab
         </div>
@@ -225,7 +227,24 @@ export default function StatusScreen({
                 </span>
               </Button>
 
-              <div className="mt-4">
+              <Button
+                variant="subtle"
+                size="md"
+                loading={isDownloading}
+                disabled={isDownloading}
+                onClick={() => {
+                  if (status.kind === 'success') {
+                    downloadReceipt(status.transaction, receiptRef)
+                  }
+                }}
+              >
+               <div className='flex flex-row gap-3 items-center'>
+                {!isDownloading && <Download size={12} aria-hidden="true" />}
+                {isDownloading ? 'Generating PDF...' : 'Download Receipt'}
+                </div>
+              </Button>
+
+              <div>
                 <Button variant="subtle" size="md" onClick={onReset}>
                   New payment
                 </Button>
@@ -377,6 +396,11 @@ export default function StatusScreen({
           />
         )}
       </AnimatePresence>
+
+      {/* Off-screen receipt for PDF generation */}
+      {status.kind === 'success' && (
+        <PaymentReceipt transaction={status.transaction} receiptRef={receiptRef} />
+      )}
     </div>
   );
 }
