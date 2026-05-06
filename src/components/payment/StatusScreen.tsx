@@ -4,21 +4,85 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { CountUp } from '@/components/ui/CountUp';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
 import { useHistory } from '@/store/paymentStore';
 import { truncateTxId } from '@/utils/formatting';
 import { MAX_ATTEMPTS } from '@/types/payment';
-import type { PaymentStatus } from '@/types/payment';
+import type { PaymentStatus, Currency } from '@/types/payment';
 
 interface StatusScreenProps {
   status: PaymentStatus;
   onRetry: () => void;
   onReset: () => void;
   formattedAmount: string;
+  rawAmount?: number;
+  currency?: Currency;
   headingRef?: React.RefObject<HTMLHeadingElement | null>;
 }
 
-export default function StatusScreen({ status, onRetry, onReset, formattedAmount, headingRef }: StatusScreenProps) {
+function DotBurst() {
+  // 8 dots radiating outward from center
+  const dots = Array.from({ length: 8 }, (_, i) => {
+    const angle = (i / 8) * 360;
+    const rad = (angle * Math.PI) / 180;
+    const distance = 52; // px from center
+    const x = Math.cos(rad) * distance;
+    const y = Math.sin(rad) * distance;
+    return { x, y, angle };
+  });
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        width: '56px',
+        height: '56px',
+        pointerEvents: 'none',
+      }}
+    >
+      {dots.map((dot, i) => (
+        <motion.div
+          key={i}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '4px',
+            height: '4px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--success)',
+            marginTop: '-2px',
+            marginLeft: '-2px',
+          }}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{
+            x: dot.x,
+            y: dot.y,
+            opacity: 0,
+            scale: 0,
+          }}
+          transition={{
+            duration: 0.6,
+            delay: 0.5 + i * 0.02, // starts after checkmark completes
+            ease: [0.2, 0, 0.8, 1],
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default function StatusScreen({
+  status,
+  onRetry,
+  onReset,
+  formattedAmount,
+  rawAmount,
+  currency,
+  headingRef,
+}: StatusScreenProps) {
   const [copied, setCopied] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const history = useHistory();
@@ -76,23 +140,48 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
           {/* SUCCESS */}
           {status.kind === 'success' && (
             <>
-              <motion.div
-                className="w-14 h-14 border border-success rounded-full flex items-center justify-center"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M5 10L8.5 13.5L15 7"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <DotBurst />
+                <motion.svg
+                  width="56"
+                  height="56"
+                  viewBox="0 0 56 56"
+                  fill="none"
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.circle
+                    cx="28"
+                    cy="28"
+                    r="26"
+                    fill="var(--success)"
+                    variants={{
+                      hidden: { scale: 0, opacity: 0 },
+                      visible: {
+                        scale: 1,
+                        opacity: 1,
+                        transition: { duration: 0.4, ease: 'easeOut' as const, delay: 0.1 },
+                      },
+                    }}
+                  />
+                  <motion.path
+                    d="M18 28L24.5 34.5L38 21"
+                    stroke="white"
+                    strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-success"
+                    fill="none"
+                    variants={{
+                      hidden: { pathLength: 0, opacity: 0 },
+                      visible: {
+                        pathLength: 1,
+                        opacity: 1,
+                        transition: { duration: 0.35, ease: 'easeOut' as const, delay: 0.5 },
+                      },
+                    }}
                   />
-                </svg>
-              </motion.div>
+                </motion.svg>
+              </div>
 
               <p className="font-mono text-[10px] tracking-[0.22em] uppercase text-success">
                 Payment confirmed
@@ -102,14 +191,23 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 Paid <span className="font-serif italic">instantly</span>.
               </h1>
 
-              <motion.div
-                className="font-sans font-light text-[52px] tracking-[-0.025em] leading-none text-ink"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                {formattedAmount}
-              </motion.div>
+              {rawAmount !== undefined && currency ? (
+                <CountUp
+                  value={rawAmount}
+                  prefix={currency === 'INR' ? '₹ ' : '$ '}
+                  duration={800}
+                  className="font-sans font-light text-[52px] tracking-[-0.025em] leading-none text-ink"
+                />
+              ) : (
+                <motion.div
+                  className="font-sans font-light text-[52px] tracking-[-0.025em] leading-none text-ink"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  {formattedAmount}
+                </motion.div>
+              )}
 
               <p className="font-mono text-[11px] text-ink-muted tracking-[0.05em]">
                 Tx · {truncateTxId(status.txId)} · {status.transaction.attempts} attempt
@@ -135,20 +233,20 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
           {status.kind === 'failed' && (
             <>
               <motion.div
-                className="w-14 h-14 border border-danger rounded-full flex items-center justify-center"
-                initial={{ scale: 0.8, opacity: 0 }}
+                initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
+                transition={{ type: 'spring', stiffness: 250, damping: 20, delay: 0.1 }}
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M6 6L14 14M14 6L6 14"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    className="text-danger"
-                  />
-                </svg>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--danger)' }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path
+                      d="M6 6L14 14M14 6L6 14"
+                      stroke="white"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
               </motion.div>
 
               <p className="font-mono text-[10px] tracking-[0.22em] uppercase text-danger">
@@ -159,9 +257,15 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
                 <span className="font-serif italic">Something</span> went wrong.
               </h1>
 
-              <div className="border border-border rounded-sm px-4 py-2.5 bg-surface">
-                <p className="font-mono text-[12px] text-ink-muted">{status.reason}</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.35 }}
+              >
+                <div className="border border-border rounded-sm px-4 py-2.5 bg-surface">
+                  <p className="font-mono text-[12px] text-ink-muted">{status.reason}</p>
+                </div>
+              </motion.div>
 
               {status.canRetry && (
                 <p className="font-mono text-[10px] tracking-[0.15em] uppercase text-ink-muted">
@@ -174,12 +278,15 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
               </div>
 
               {status.canRetry ? (
-                <Button variant="primary" size="lg" onClick={onRetry}>
-                  Try again
-                  <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
-                    <path d="M0 4H13M13 4L9 1M13 4L9 7" stroke="currentColor" strokeWidth="1.2" />
-                  </svg>
-                </Button>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.45 }}
+                >
+                  <Button variant="primary" size="lg" onClick={onRetry}>
+                    Try again
+                  </Button>
+                </motion.div>
               ) : (
                 <>
                   <p className="font-mono text-[11px] text-ink-muted tracking-[0.05em] max-w-[32ch] mx-auto text-center">
@@ -197,16 +304,17 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
           {status.kind === 'timeout' && (
             <>
               <motion.div
-                className="w-14 h-14 border border-warning rounded-full flex items-center justify-center"
-                initial={{ scale: 0.8, opacity: 0 }}
+                initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
+                transition={{ type: 'spring', stiffness: 250, damping: 20, delay: 0.1 }}
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-warning">
-                  <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.2" fill="none" />
-                  <path d="M 10 10 L 10 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  <path d="M 10 10 L 13 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--warning)' }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7" stroke="white" strokeWidth="1.4" fill="none" />
+                    <path d="M 10 10 L 10 5" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+                    <path d="M 10 10 L 13 10" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </div>
               </motion.div>
 
               <p className="font-mono text-[10px] tracking-[0.22em] uppercase text-warning">
@@ -232,12 +340,15 @@ export default function StatusScreen({ status, onRetry, onReset, formattedAmount
               </div>
 
               {status.canRetry ? (
-                <Button variant="primary" size="lg" onClick={onRetry}>
-                  Try again
-                  <svg width="14" height="8" viewBox="0 0 14 8" fill="none">
-                    <path d="M0 4H13M13 4L9 1M13 4L9 7" stroke="currentColor" strokeWidth="1.2" />
-                  </svg>
-                </Button>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.45 }}
+                >
+                  <Button variant="primary" size="lg" onClick={onRetry}>
+                    Try again
+                  </Button>
+                </motion.div>
               ) : (
                 <>
                   <p className="font-mono text-[11px] text-ink-muted tracking-[0.05em] max-w-[32ch] mx-auto text-center">

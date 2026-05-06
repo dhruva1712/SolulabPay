@@ -90,6 +90,8 @@ export default function Home() {
               onRetry={handleRetry}
               onReset={handleReset}
               formattedAmount={formattedAmount}
+              rawAmount={lastValuesRef.current?.amount}
+              currency={lastValuesRef.current?.currency}
               headingRef={headingRef}
             />
           </motion.div>
