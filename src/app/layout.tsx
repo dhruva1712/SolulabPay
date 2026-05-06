@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Payment — Gateway Demo",
+  title: "SoluLab Pay",
   description: "A secure payment gateway interface.",
 };
 
