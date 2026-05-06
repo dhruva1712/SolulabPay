@@ -39,6 +39,9 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${newsreader.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function() {try {var theme = localStorage.getItem('theme');if (theme === 'dark') document.documentElement.classList.add('dark');} catch(e) {}})();`}} />
+      </head>
       <body className="font-sans antialiased min-h-screen">{children}</body>
     </html>
   );

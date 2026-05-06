@@ -79,7 +79,7 @@ export default function CardPreview({
             backfaceVisibility: 'hidden',
             aspectRatio: '1.586/1',
             borderRadius: 0,
-            background: 'linear-gradient(135deg, #F5EFE6 0%, #ECE3D2 100%)',
+            background: 'var(--card-gradient)',
             boxShadow: 'var(--shadow-card-elevated)',
           }}
           animate={{
@@ -297,7 +297,7 @@ export default function CardPreview({
             backfaceVisibility: 'hidden',
             aspectRatio: '1.586/1',
             borderRadius: 0,
-            background: 'linear-gradient(135deg, #F5EFE6 0%, #ECE3D2 100%)',
+            background: 'var(--card-gradient)',
             boxShadow: 'var(--shadow-card-elevated)',
             transform: 'rotateY(180deg)',
           }}

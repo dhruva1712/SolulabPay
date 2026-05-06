@@ -12,6 +12,7 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import CardPreview from '@/components/payment/CardPreview';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useHistory, useStatus } from '@/store/paymentStore';
 import { cn } from '@/utils/cn';
 import type { CardType, Currency } from '@/types/payment';
@@ -27,8 +28,9 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
   const [currency, setCurrency] = useState<Currency>('INR');
   const [cardDisplayValue, setCardDisplayValue] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isBackspaceRef = useRef(false);
+  const [expiryDisplay, setExpiryDisplay] = useState('');
   const cardTypeRef = useRef<CardType>('unknown');
+  const expiryDigitsRef = useRef('');
   const history = useHistory();
   const status = useStatus();
 
@@ -38,8 +40,10 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
       data: PaymentFormValues,
       context: unknown,
       options: ResolverOptions<PaymentFormValues>
-    ): Promise<ResolverResult<PaymentFormValues>> =>
-      zodResolver(buildPaymentFormSchema(cardTypeRef.current))(data, context, options),
+    ): Promise<ResolverResult<PaymentFormValues>> => {
+      const schema = buildPaymentFormSchema(cardTypeRef.current);
+      return zodResolver(schema)(data as any, context, options as any) as Promise<ResolverResult<PaymentFormValues>>;
+    },
     []
   );
 
@@ -54,7 +58,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
     formState: { errors, isValid, touchedFields },
   } = useForm<PaymentFormValues>({
     resolver,
-    mode: 'all',
+    mode: 'onTouched',
     reValidateMode: 'onChange',
     defaultValues: {
       cardholderName: '',
@@ -77,10 +81,64 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
     onSubmit(values);
   };
 
-  const handleCurrencyChange = (newCurrency: Currency) => {
-    setCurrency(newCurrency);
-    setValue('currency', newCurrency);
-    trigger('amount');
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip everything except digits
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+    expiryDigitsRef.current = digits;
+
+    // Build display: auto-insert slash after 2 digits
+    let display = '';
+    if (digits.length <= 2) {
+      display = digits;
+    } else {
+      display = digits.slice(0, 2) + '/' + digits.slice(2);
+    }
+    setExpiryDisplay(display);
+
+    // Store MM/YY in form only when 4 digits complete
+    const formValue = digits.length === 4
+      ? digits.slice(0, 2) + '/' + digits.slice(2, 4)
+      : '';
+    setValue('expiry', formValue, {
+      shouldValidate: !!touchedFields.expiry,
+      shouldDirty: true,
+    });
+  };
+
+  const handleExpiryKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const digits = expiryDigitsRef.current;
+      if (digits.length === 0) return;
+
+      const newDigits = digits.slice(0, -1);
+      expiryDigitsRef.current = newDigits;
+
+      // Rebuild display
+      let display = '';
+      if (newDigits.length <= 2) {
+        display = newDigits;
+      } else {
+        display = newDigits.slice(0, 2) + '/' + newDigits.slice(2);
+      }
+      setExpiryDisplay(display);
+
+      const formValue = newDigits.length === 4
+        ? newDigits.slice(0, 2) + '/' + newDigits.slice(2, 4)
+        : '';
+      setValue('expiry', formValue, {
+        shouldValidate: !!touchedFields.expiry,
+        shouldDirty: true,
+      });
+    }
+  };
+
+  const handleExpiryBlur = () => {
+    const digits = expiryDigitsRef.current;
+    const formValue = digits.length === 4
+      ? digits.slice(0, 2) + '/' + digits.slice(2, 4)
+      : '';
+    setValue('expiry', formValue, { shouldValidate: true });
   };
 
   return (
@@ -112,6 +170,7 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
               </span>
             )}
           </button>
+          <ThemeToggle />
           <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hidden sm:block">
             Secure · TLS 1.3
           </span>
@@ -220,28 +279,17 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                 <Input
                   label="Expiry"
                   placeholder="MM/YY"
+                  value={expiryDisplay}
+                  onChange={handleExpiryChange}
+                  onKeyDown={handleExpiryKeyDown}
+                  onBlur={handleExpiryBlur}
                   inputMode="numeric"
                   maxLength={5}
                   className="font-mono"
                   error={touchedFields.expiry ? errors.expiry?.message : undefined}
                   isValid={touchedFields.expiry && !errors.expiry}
                   aria-required="true"
-                  onKeyDown={(e) => {
-                    isBackspaceRef.current = e.key === 'Backspace';
-                  }}
-                  {...register('expiry', {
-                    onChange: (e) => {
-                      const input = e.target.value;
-                      const digits = input.replace(/\D/g, '');
-                      
-                      let formatted = digits;
-                      if (digits.length >= 2 && !isBackspaceRef.current) {
-                        formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4);
-                      }
-                      
-                      e.target.value = formatted;
-                    },
-                  })}
+                  aria-label="Card expiry date"
                 />
 
                 <Input
@@ -285,11 +333,31 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                       error={touchedFields.amount ? errors.amount?.message : undefined}
                       isValid={touchedFields.amount && !errors.amount}
                       aria-required="true"
+                      leadingSlot={
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={currency}
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            transition={{ duration: 0.15 }}
+                            className="font-mono text-[14px] text-ink-muted select-none pointer-events-none"
+                          >
+                            {currency === 'INR' ? '₹' : '$'}
+                          </motion.span>
+                        </AnimatePresence>
+                      }
                       trailingSlot={
                         <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.1em]">
                           <button
                             type="button"
-                            onClick={() => handleCurrencyChange('INR')}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCurrency('INR');
+                              setValue('currency', 'INR', { shouldValidate: true, shouldDirty: true });
+                              trigger('amount');
+                            }}
                             className={cn(
                               'transition-colors',
                               currency === 'INR'
@@ -302,7 +370,13 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                           <span className="text-ink-subtle">/</span>
                           <button
                             type="button"
-                            onClick={() => handleCurrencyChange('USD')}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setCurrency('USD');
+                              setValue('currency', 'USD', { shouldValidate: true, shouldDirty: true });
+                              trigger('amount');
+                            }}
                             className={cn(
                               'transition-colors',
                               currency === 'USD'

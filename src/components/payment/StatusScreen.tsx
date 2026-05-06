@@ -6,6 +6,7 @@ import { Copy, Clock } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { CountUp } from '@/components/ui/CountUp';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useHistory } from '@/store/paymentStore';
 import { truncateTxId } from '@/utils/formatting';
 import { MAX_ATTEMPTS } from '@/types/payment';
@@ -128,6 +129,7 @@ export default function StatusScreen({
               </span>
             )}
           </button>
+          <ThemeToggle />
           <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hidden sm:block">
             Secure · TLS 1.3
           </span>
@@ -215,9 +217,11 @@ export default function StatusScreen({
               </p>
 
               <Button variant="ghost" size="sm" onClick={handleCopyTxId} className='flex flex-row gap-3'>
-                <Copy size={12} />
+               <span className='flex flex-row gap-3'>
+               <Copy size={12} />
                 <span className="font-mono text-[10px] tracking-[0.1em] uppercase">
                   {copied ? 'Copied!' : 'Copy ID'}
+                </span>
                 </span>
               </Button>
 

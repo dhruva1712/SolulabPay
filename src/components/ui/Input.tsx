@@ -64,7 +64,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           />
 
           {trailingSlot && (
-            <div className="absolute right-3.5 pointer-events-none">{trailingSlot}</div>
+            <div className="absolute right-3.5 pointer-events-auto">{trailingSlot}</div>
           )}
 
           {/* Valid state checkmark */}

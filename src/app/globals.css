@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Background and surface colors */
   --bg: #FAF8F4;
@@ -28,6 +30,29 @@
   --focus-ring: rgba(122, 31, 43, 0.18);
   --shadow-card: 0 1px 2px rgba(28, 26, 23, 0.04), 0 4px 12px rgba(28, 26, 23, 0.04);
   --shadow-card-elevated: 0 1px 2px rgba(28, 26, 23, 0.04), 0 24px 48px -16px rgba(28, 26, 23, 0.18);
+  
+  /* Card gradient */
+  --card-gradient: linear-gradient(135deg, #F5EFE6 0%, #ECE3D2 100%);
+}
+
+.dark {
+  --bg: #111010;
+  --surface: #1A1917;
+  --ink: #F0EDE8;
+  --ink-muted: #9B9488;
+  --ink-subtle: #5C5650;
+  --border: #2A2824;
+  --border-strong: #3A3830;
+  --accent: #A0303F;
+  --accent-hover: #8B2535;
+  --accent-soft: rgba(160, 48, 63, 0.12);
+  --success: #5A8A54;
+  --danger: #C0523A;
+  --warning: #C49A3C;
+  --focus-ring: rgba(160, 48, 63, 0.25);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-card-elevated: 0 1px 2px rgba(0,0,0,0.3), 0 24px 48px -16px rgba(0,0,0,0.5);
+  --card-gradient: linear-gradient(135deg, #2A2520 0%, #1E1B18 100%);
 }
 
 @theme inline {
@@ -108,4 +133,31 @@ h6 {
 .font-serif-italic {
   font-family: var(--font-serif), serif;
   font-style: italic;
+}
+
+/* ─── View transition: radial wipe for theme toggle ─── */
+
+/* Disable the default cross-fade that the browser applies */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Old theme fades out instantly (hidden behind the expanding circle) */
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+/* New theme sits on top — the clip-path animation is applied via JS */
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* Prevent transition on reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
 }

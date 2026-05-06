@@ -66,11 +66,17 @@ export function buildCvvSchema(cardType: CardType): z.ZodString {
   return z.string().regex(new RegExp(`^\\d{${length}}$`), 'Invalid CVV');
 }
 
-export const amountSchema = z
-  .number()
-  .refine((val) => Number.isFinite(val) && val > 0, 'Amount must be greater than zero')
-  .refine((val) => val <= 9_999_999, 'Amount is too large')
-  .refine((val) => Math.abs(val * 100 - Math.round(val * 100)) <= 1e-6, 'Maximum 2 decimal places');
+export const amountSchema = z.preprocess(
+  (val) => {
+    if (val === '' || val === null || val === undefined) return undefined;
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return isNaN(num as number) ? undefined : num;
+  },
+  z.number({ message: 'Enter an amount' })
+    .refine((val) => Number.isFinite(val) && val > 0, { message: 'Amount must be greater than zero' })
+    .refine((val) => val <= 9_999_999, { message: 'Amount is too large' })
+    .refine((val) => Math.abs(val * 100 - Math.round(val * 100)) <= 1e-6, { message: 'Maximum 2 decimal places' })
+);
 
 export const currencySchema = z.enum(['INR', 'USD']);
 
