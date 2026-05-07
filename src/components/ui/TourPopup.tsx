@@ -671,12 +671,12 @@ export function TourPopup({ onDismiss, skipHook }: TourPopupProps) {
 
                                         {/* Heading */}
                                         <h2 className="font-serif italic text-[26px] leading-[1.2] tracking-[-0.01em] text-ink mb-3">
-                                            Fifty tabs open. Make this one count.
+                                            Something's different here. 30 seconds to see what.
                                         </h2>
 
                                         {/* Body */}
                                         <p className="font-sans text-[13px] text-ink-muted leading-relaxed mb-7">
-                                            This one does a few things you won't see in other submissions. Takes 30 seconds.
+                                            This one does a few things the others might now. Wanna see?
                                         </p>
 
                                         {/* Buttons */}
