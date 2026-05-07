@@ -6,7 +6,6 @@ import { X, Download } from 'lucide-react';
 import { useHistory } from '@/store/paymentStore';
 import TransactionHistory from '@/components/payment/TransactionHistory';
 import { formatCurrency, formatTimestamp, truncateTxId } from '@/utils/formatting';
-import Button from '@/components/ui/Button';
 import type { Transaction } from '@/types/payment';
 import { MAX_ATTEMPTS } from '@/types/payment';
 import { PaymentReceipt } from '@/components/payment/PaymentReceipt';
@@ -18,7 +17,6 @@ interface TransactionSidebarProps {
 }
 
 export default function TransactionSidebar({ isOpen, onClose }: TransactionSidebarProps) {
-  const history = useHistory();
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [copied, setCopied] = useState(false);
@@ -54,13 +52,7 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
     };
   }, [isOpen, selectedTx, onClose]);
 
-  const handleCopy = async () => {
-    if (selectedTx) {
-      await navigator.clipboard.writeText(selectedTx.id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+
 
   const cardTypeLabel =
     selectedTx && selectedTx.cardType !== 'unknown'
@@ -98,7 +90,7 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
         aria-labelledby="sidebar-title"
       >
         {/* Header */}
-        <div className="flex justify-between items-center px-8 py-6 border-b border-border flex-shrink-0">
+        <div className="flex justify-between items-center px-6 py-7 sm:px-8 border-b border-border flex-shrink-0">
           {/* Left side - breadcrumb navigation */}
           {selectedTx === null ? (
             <div>
@@ -110,10 +102,10 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
               </h2>
             </div>
           ) : (
-            <div>
+            <div className="flex flex-col gap-1">
               <button
                 onClick={() => setSelectedTx(null)}
-                className="font-mono text-[10px] tracking-[0.15em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 flex items-center gap-2 mb-1"
+                className="font-mono text-[10px] tracking-[0.15em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 flex items-center gap-2 mb-3"
                 aria-label="Back to transaction list"
               >
                 ← Transactions
@@ -136,7 +128,7 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8">
           <AnimatePresence mode="wait">
             {selectedTx === null ? (
               <motion.div
@@ -157,11 +149,11 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                 transition={{ duration: 0.2 }}
               >
                 {/* Detail content inline */}
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col">
                   {/* Status block */}
                   <div>
                     <span
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[11px] font-mono tracking-[0.1em] uppercase ${
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-sm border text-[11px] font-mono tracking-[0.1em] uppercase mb-4 ${
                         selectedTx.status === 'success'
                           ? 'border-success text-success bg-success/5'
                           : selectedTx.status === 'failed'
@@ -176,21 +168,21 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                         : 'Timed out'}
                     </span>
 
-                    <div className="font-sans font-light text-[40px] tracking-[-0.025em] leading-none mt-4 text-ink">
+                    <div className="font-sans font-light text-[40px] tracking-[-0.025em] leading-none mb-6 text-ink">
                       {formatCurrency(selectedTx.amount, selectedTx.currency)}
                     </div>
                   </div>
 
                   {/* Detail rows */}
-                  <div>
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                  <div className="mt-8">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Transaction ID
                       </span>
                       <span className="font-sans text-[14px] text-ink break-all">{selectedTx.id}</span>
                     </div>
 
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Date & time
                       </span>
@@ -199,7 +191,7 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                       </span>
                     </div>
 
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Card
                       </span>
@@ -208,21 +200,21 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                       </span>
                     </div>
 
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Cardholder
                       </span>
                       <span className="font-sans text-[14px] text-ink">{selectedTx.cardholderName}</span>
                     </div>
 
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Currency
                       </span>
                       <span className="font-sans text-[14px] text-ink">{selectedTx.currency}</span>
                     </div>
 
-                    <div className="flex flex-col gap-1 py-4 border-b border-border">
+                    <div className="flex flex-col gap-1 py-5 border-b border-border">
                       <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                         Attempts
                       </span>
@@ -232,7 +224,7 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                     </div>
 
                     {(selectedTx.status === 'failed' || selectedTx.status === 'timeout') && (
-                      <div className="flex flex-col gap-1 py-4 border-b border-border last:border-0">
+                      <div className="flex flex-col gap-1 py-5 border-b border-border last:border-0">
                         <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-muted">
                           Reason
                         </span>
@@ -241,26 +233,40 @@ export default function TransactionSidebar({ isOpen, onClose }: TransactionSideb
                     )}
                   </div>
 
-                  {/* Copy button */}
-                  <Button variant="ghost" size="sm" onClick={handleCopy}>
-                    <span className="font-mono text-[10px] tracking-[0.1em] uppercase">
-                      {copied ? 'Copied!' : 'Copy transaction ID'}
-                    </span>
-                  </Button>
+                  {/* Action buttons */}
+                  <div className="flex flex-col gap-3 mt-8 pb-8">
+                    {/* Copy transaction ID button */}
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(selectedTx.id);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="w-full h-11 flex items-center justify-center gap-2 border border-border rounded-sm font-mono text-[11px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink hover:border-border-strong transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      {copied ? 'Copied!' : 'Copy Transaction ID'}
+                    </button>
 
-                  {/* Download receipt button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    loading={isDownloading}
-                    disabled={isDownloading}
-                    onClick={() => downloadReceipt(selectedTx, receiptRef)}
-                  >
-                    <div className='flex flex-row gap-3 items-center'>
-                    {!isDownloading && <Download size={12} aria-hidden="true" />}
-                    {isDownloading ? 'Generating PDF...' : 'Download Receipt'}
-                    </div>
-                  </Button>
+                    {/* Download receipt button */}
+                    <button
+                      onClick={() => downloadReceipt(selectedTx, receiptRef)}
+                      disabled={isDownloading}
+                      className="w-full h-11 flex items-center justify-center gap-2 bg-accent text-white rounded-sm font-sans font-medium text-[13px] tracking-[0.04em] hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)]"
+                    >
+                      {isDownloading ? (
+                        <span className="font-mono text-[11px] tracking-[0.1em] uppercase">Generating...</span>
+                      ) : (
+                        <>
+                          <Download size={13} aria-hidden="true" />
+                          Download Receipt
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}

@@ -14,6 +14,8 @@ import CardPreview from '@/components/payment/CardPreview';
 import CardRevealOverlay from '@/components/payment/CardRevealOverlay';
 import TransactionSidebar from '@/components/payment/TransactionSidebar';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { TourPopup } from '@/components/ui/TourPopup';
+import { HelpButton } from '@/components/ui/HelpButton';
 import { useHistory, useStatus } from '@/store/paymentStore';
 import { cn } from '@/utils/cn';
 import type { CardType, Currency } from '@/types/payment';
@@ -31,6 +33,9 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [expiryDisplay, setExpiryDisplay] = useState('');
     const [showOverlay, setShowOverlay] = useState(false);
+    const [showTour, setShowTour] = useState(false);
+    const [tourSkipHook, setTourSkipHook] = useState(false);
+    const [tourDismissed, setTourDismissed] = useState(false);
     const cardTypeRef = useRef<CardType>('unknown');
     const expiryDigitsRef = useRef('');
     const formRef = useRef<HTMLFormElement>(null);
@@ -76,7 +81,23 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
         },
     });
 
-    const isComplete = isValid;
+    // Check sessionStorage on mount for tour
+    useEffect(() => {
+        try {
+            const seen = sessionStorage.getItem('solulab-tour-seen');
+            if (!seen) {
+                // Small delay so page loads first
+                setTimeout(() => {
+                    setTourSkipHook(false); // show the hook on first visit
+                    setShowTour(true);
+                }, 800);
+            } else {
+                setTourDismissed(true);
+            }
+        } catch {
+            // sessionStorage unavailable — skip tour silently
+        }
+    }, []);
 
     // Update cardTypeRef when cardType changes
     useEffect(() => {
@@ -180,33 +201,49 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
         setValue('expiry', formValue, { shouldValidate: true });
     };
 
+    const handleTourDismiss = () => {
+        setShowTour(false);
+        setTourDismissed(true);
+        try {
+            sessionStorage.setItem('solulab-tour-seen', 'dismissed');
+        } catch {
+            /* silent */
+        }
+    };
+
+    const handleHelpClick = () => {
+        setTourSkipHook(true); // skip the hook, go straight to slides
+        setShowTour(true);
+    };
+
     return (
         <div className="min-h-screen bg-bg">
             {/* Header */}
-            <header className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-border px-6 md:px-12 py-4 flex justify-between items-center">
+            <header className="sticky top-0 z-10 bg-bg/95 backdrop-blur-sm border-b border-border px-4 sm:px-6 md:px-12 py-4 flex justify-between items-center">
                 <div className="font-sans gap-3 font-medium text-[13px] tracking-[0.2em] uppercase text-ink flex items-center">
                     <img
                         src="/logo.svg"
                         alt="SoluLab"
-                        className="h-7 w-auto"
+                        className="h-5 w-auto sm:h-6"
                         style={{ display: 'block' }}
                     />
-                     SoluLab
+                    SoluLab
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 sm:gap-6">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
                         className="flex items-center gap-2 font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] rounded-sm min-h-[44px] min-w-[44px]"
                         aria-label={`Open transaction history, ${history.length} transactions`}
                     >
                         <Clock size={12} aria-hidden="true" />
-                        Transactions
+                        <span className="hidden sm:inline">Transactions</span>
                         {history.length > 0 && (
                             <span className="inline-flex items-center justify-center w-4 h-4 bg-accent text-white font-mono text-[9px] rounded-full">
                                 {history.length > 9 ? '9+' : history.length}
                             </span>
                         )}
                     </button>
+                    {tourDismissed && <HelpButton onClick={handleHelpClick} />}
                     <ThemeToggle />
                     <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-muted hidden sm:block">
                         Secure · TLS 1.3
@@ -519,6 +556,11 @@ export default function PaymentForm({ onSubmit, isSubmitting }: PaymentFormProps
                 onPay={handleOverlayPay}
                 onEdit={handleEdit}
             />
+
+            {/* Tour Popup */}
+            <AnimatePresence>
+                {showTour && <TourPopup onDismiss={handleTourDismiss} skipHook={tourSkipHook} />}
+            </AnimatePresence>
         </div>
     );
 }
